@@ -57,25 +57,25 @@ function NewHoldingForm() {
     <main className="max-w-lg mx-auto px-6 py-8">
       <div className="mb-6">
         <h1 className="font-serif text-2xl font-light">Add holding</h1>
-        <p className="text-xs mt-1" style= color: 'var(--ink-muted)' >Track a new position in your portfolio</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--ink-muted)' }}>Track a new position in your portfolio</p>
       </div>
       <div className="space-y-5">
         {fields.map(({ label, k, placeholder, upper, type, hint }) => (
           <div key={k} className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider" style= color: 'var(--ink-muted)' >{label}</label>
+            <label className="text-xs uppercase tracking-wider" style={{ color: 'var(--ink-muted)' }}>{label}</label>
             <input
               type={type}
               value={form[k]}
               onChange={e => set(k, upper ? e.target.value.toUpperCase() : e.target.value)}
               placeholder={placeholder}
               className="w-full px-3 py-2 font-mono text-sm outline-none"
-              style= background: 'transparent', border: '0.5px solid var(--border)', color: 'var(--ink)' 
+              style={{ background: 'transparent', border: '0.5px solid var(--border)', color: 'var(--ink)' }}
             />
-            <p className="text-2xs" style= color: 'var(--ink-faint)' >{hint}</p>
+            <p className="text-2xs" style={{ color: 'var(--ink-faint)' }}>{hint}</p>
           </div>
         ))}
         {error && (
-          <p className="text-xs px-3 py-2" style= background: '#7a1a1a18', color: '#7a1a1a', border: '0.5px solid #7a1a1a40' >{error}</p>
+          <p className="text-xs px-3 py-2" style={{ background: '#7a1a1a18', color: '#7a1a1a', border: '0.5px solid #7a1a1a40' }}>{error}</p>
         )}
       </div>
       <div className="mt-6 flex gap-3">
@@ -83,14 +83,14 @@ function NewHoldingForm() {
           onClick={save}
           disabled={saving}
           className="px-4 py-2 text-xs font-mono uppercase tracking-wider"
-          style= background: 'var(--accent)', color: 'white', border: '0.5px solid var(--accent)', opacity: saving ? 0.6 : 1 
+          style={{ background: 'var(--accent)', color: 'white', border: '0.5px solid var(--accent)', opacity: saving ? 0.6 : 1 }}
         >
           {saving ? 'saving...' : 'add holding'}
         </button>
         <button
           onClick={() => router.back()}
           className="px-4 py-2 text-xs font-mono uppercase tracking-wider"
-          style= border: '0.5px solid var(--border)', color: 'var(--ink-muted)' 
+          style={{ border: '0.5px solid var(--border)', color: 'var(--ink-muted)' }}
         >
           cancel
         </button>

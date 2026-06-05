@@ -17,9 +17,9 @@ function TooltipContent({ active, payload }: { active?: boolean; payload?: Array
   return (
     <div
       className="px-2 py-1.5 text-xs font-mono"
-      style= background: 'var(--bg)', border: '0.5px solid var(--border)', color: 'var(--ink)' 
+      style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', color: 'var(--ink)' }}
     >
-      <div style= color: 'var(--ink-muted)' >{payload[0].payload.date}</div>
+      <div style={{ color: 'var(--ink-muted)' }}>{payload[0].payload.date}</div>
       <div className="font-medium">${payload[0].value.toFixed(2)}</div>
     </div>
   )
@@ -31,7 +31,7 @@ export function PriceChart({ data, ticker }: Props) {
 
   if (filtered.length === 0) {
     return (
-      <div className="h-44 flex items-center justify-center text-xs" style= color: 'var(--ink-faint)' >
+      <div className="h-44 flex items-center justify-center text-xs" style={{ color: 'var(--ink-faint)' }}>
         no price data
       </div>
     )
@@ -51,10 +51,10 @@ export function PriceChart({ data, ticker }: Props) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-xs" style= color: positive ? '#1a5c35' : '#7a1a1a' >
+          <span className="font-mono text-xs" style={{ color: positive ? '#1a5c35' : '#7a1a1a' }}>
             {changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%
           </span>
-          <span className="text-2xs" style= color: 'var(--ink-faint)' >
+          <span className="text-2xs" style={{ color: 'var(--ink-faint)' }}>
             {filtered.length} trading days
           </span>
         </div>
@@ -76,7 +76,7 @@ export function PriceChart({ data, ticker }: Props) {
         </div>
       </div>
       <ResponsiveContainer width="100%" height={200}>
-        <AreaChart data={filtered} margin= top: 4, right: 8, left: 0, bottom: 0 >
+        <AreaChart data={filtered} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id={`grad-${ticker}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={color} stopOpacity={0.16} />
@@ -85,7 +85,7 @@ export function PriceChart({ data, ticker }: Props) {
           </defs>
           <XAxis
             dataKey="date"
-            tick= fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' 
+            tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' }}
             tickLine={false}
             axisLine={false}
             tickFormatter={d => d.slice(5)}
@@ -93,7 +93,7 @@ export function PriceChart({ data, ticker }: Props) {
           />
           <YAxis
             domain={[minVal - pad, maxVal + pad]}
-            tick= fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' 
+            tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' }}
             tickLine={false}
             axisLine={false}
             tickFormatter={v => `$${Number(v).toFixed(0)}`}
@@ -108,7 +108,7 @@ export function PriceChart({ data, ticker }: Props) {
             strokeWidth={1.5}
             fill={`url(#grad-${ticker})`}
             dot={false}
-            activeDot= r: 3, stroke: color, strokeWidth: 1 
+            activeDot={{ r: 3, stroke: color, strokeWidth: 1 }}
           />
         </AreaChart>
       </ResponsiveContainer>

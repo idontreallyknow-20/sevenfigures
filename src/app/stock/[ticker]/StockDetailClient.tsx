@@ -55,8 +55,8 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
               <h1 className="font-serif text-3xl font-light">{security.ticker}</h1>
               <TierBadge tier={tier} />
             </div>
-            <p className="text-sm" style= color: 'var(--ink-muted)' >{security.name}</p>
-            <p className="text-xs mt-0.5" style= color: 'var(--ink-faint)' >
+            <p className="text-sm" style={{ color: 'var(--ink-muted)' }}>{security.name}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--ink-faint)' }}>
               {[security.theme, security.sector].filter(Boolean).join(' · ')}
             </p>
           </div>
@@ -65,11 +65,11 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
               {quote ? `$${quote.price.toFixed(2)}` : '—'}
             </div>
             {quote && (
-              <div className="font-mono text-sm" style=122>
+              <div className="font-mono text-sm" style={{ color: quote.changePercent >= 0 ? '#1a5c35' : '#7a1a1a' }}>
                 {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
               </div>
             )}
-            <div className="text-2xs mt-0.5" style= color: 'var(--ink-faint)' >~15 min delayed</div>
+            <div className="text-2xs mt-0.5" style={{ color: 'var(--ink-faint)' }}>~15 min delayed</div>
           </div>
         </div>
 
@@ -78,15 +78,15 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
           <div className="col-span-2 space-y-6">
 
             {/* Price chart */}
-            <div className="p-4" style= border: '0.5px solid var(--border)' >
+            <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
               <PriceChart data={bars} ticker={security.ticker} />
             </div>
 
             {/* Score bars */}
             {score && (
-              <div className="p-4" style= border: '0.5px solid var(--border)' >
+              <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs uppercase tracking-wider" style= color: 'var(--ink-faint)' >Score dimensions</span>
+                  <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Score dimensions</span>
                   <span className="font-mono text-lg font-medium">{total}/35</span>
                 </div>
                 <div className="space-y-3">
@@ -94,7 +94,7 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
                     const val = score[key]
                     return (
                       <div key={key} className="flex items-center gap-3">
-                        <span className="font-mono text-xs w-28 shrink-0" style= color: 'var(--ink-muted)' >{label}</span>
+                        <span className="font-mono text-xs w-28 shrink-0" style={{ color: 'var(--ink-muted)' }}>{label}</span>
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map(n => (
                             <div
@@ -110,23 +110,23 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
                             </div>
                           ))}
                         </div>
-                        <span className="text-2xs" style= color: 'var(--ink-faint)' >{desc}</span>
+                        <span className="text-2xs" style={{ color: 'var(--ink-faint)' }}>{desc}</span>
                       </div>
                     )
                   })}
                 </div>
-                <div className="mt-4 pt-3" style= borderTop: '0.5px solid var(--border)' >
-                  <Link href={`/stock/${security.ticker}/edit-score`} className="text-xs" style= color: 'var(--accent)' >edit scores →</Link>
+                <div className="mt-4 pt-3" style={{ borderTop: '0.5px solid var(--border)' }}>
+                  <Link href={`/stock/${security.ticker}/edit-score`} className="text-xs" style={{ color: 'var(--accent)' }}>edit scores →</Link>
                 </div>
               </div>
             )}
 
             {/* Thesis */}
             {thesis && (
-              <div className="p-4 space-y-4" style= border: '0.5px solid var(--border)' >
+              <div className="p-4 space-y-4" style={{ border: '0.5px solid var(--border)' }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-wider" style= color: 'var(--ink-faint)' >Thesis</span>
-                  <span className="font-mono text-xs px-1.5 py-0.5 uppercase" style= border: '0.5px solid var(--border)', color: 'var(--ink-muted)' >{thesis.game_type}</span>
+                  <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Thesis</span>
+                  <span className="font-mono text-xs px-1.5 py-0.5 uppercase" style={{ border: '0.5px solid var(--border)', color: 'var(--ink-muted)' }}>{thesis.game_type}</span>
                 </div>
                 {[
                   { label: 'Why', val: thesis.why },
@@ -136,26 +136,26 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
                   { label: 'Falsifiability', val: thesis.falsifiability_note },
                 ].map(({ label, val }) => val && val !== 'to fill in' && (
                   <div key={label}>
-                    <div className="text-2xs uppercase tracking-wider mb-1" style= color: 'var(--ink-faint)' >{label}</div>
-                    <p className="font-serif text-sm leading-relaxed" style= color: 'var(--ink)' >{val}</p>
+                    <div className="text-2xs uppercase tracking-wider mb-1" style={{ color: 'var(--ink-faint)' }}>{label}</div>
+                    <p className="font-serif text-sm leading-relaxed" style={{ color: 'var(--ink)' }}>{val}</p>
                   </div>
                 ))}
-                <div className="pt-2" style= borderTop: '0.5px solid var(--border)' >
-                  <Link href={`/stock/${security.ticker}/edit-thesis`} className="text-xs" style= color: 'var(--accent)' >edit thesis →</Link>
+                <div className="pt-2" style={{ borderTop: '0.5px solid var(--border)' }}>
+                  <Link href={`/stock/${security.ticker}/edit-thesis`} className="text-xs" style={{ color: 'var(--accent)' }}>edit thesis →</Link>
                 </div>
               </div>
             )}
 
             {!score && (
-              <div className="p-4 text-center" style= border: '0.5px solid var(--border)' >
-                <p className="text-xs mb-2" style= color: 'var(--ink-faint)' >No scores yet</p>
-                <Link href={`/stock/${security.ticker}/edit-score`} className="text-xs" style= color: 'var(--accent)' >+ add scores →</Link>
+              <div className="p-4 text-center" style={{ border: '0.5px solid var(--border)' }}>
+                <p className="text-xs mb-2" style={{ color: 'var(--ink-faint)' }}>No scores yet</p>
+                <Link href={`/stock/${security.ticker}/edit-score`} className="text-xs" style={{ color: 'var(--accent)' }}>+ add scores →</Link>
               </div>
             )}
             {!thesis && (
-              <div className="p-4 text-center" style= border: '0.5px solid var(--border)' >
-                <p className="text-xs mb-2" style= color: 'var(--ink-faint)' >No thesis yet</p>
-                <Link href={`/stock/${security.ticker}/edit-thesis`} className="text-xs" style= color: 'var(--accent)' >+ write thesis →</Link>
+              <div className="p-4 text-center" style={{ border: '0.5px solid var(--border)' }}>
+                <p className="text-xs mb-2" style={{ color: 'var(--ink-faint)' }}>No thesis yet</p>
+                <Link href={`/stock/${security.ticker}/edit-thesis`} className="text-xs" style={{ color: 'var(--accent)' }}>+ write thesis →</Link>
               </div>
             )}
           </div>
@@ -163,35 +163,35 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
           {/* ---- Right sidebar (1/3) ---- */}
           <div className="space-y-4">
             {score && (
-              <div className="p-4" style= border: '0.5px solid var(--border)' >
-                <div className="text-xs uppercase tracking-wider mb-2" style= color: 'var(--ink-faint)' >Radar</div>
+              <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
+                <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Radar</div>
                 <ScoreRadar scores={[{ ticker: security.ticker, score }]} />
               </div>
             )}
 
             {/* Quick actions */}
-            <div className="p-3 space-y-1.5" style= border: '0.5px solid var(--border)' >
-              <div className="text-xs uppercase tracking-wider mb-2" style= color: 'var(--ink-faint)' >Quick actions</div>
-              <Link href={`/portfolio/new?ticker=${security.ticker}`} className="block text-xs py-1" style= color: 'var(--accent)' >+ add to portfolio →</Link>
-              <Link href={`/journal/new?ticker=${security.ticker}`} className="block text-xs py-1" style= color: 'var(--accent)' >+ log a decision →</Link>
-              <Link href={`/stock/${security.ticker}/edit-score`} className="block text-xs py-1" style= color: 'var(--accent)' >+ edit score →</Link>
-              <Link href={`/stock/${security.ticker}/edit-thesis`} className="block text-xs py-1" style= color: 'var(--accent)' >+ edit thesis →</Link>
+            <div className="p-3 space-y-1.5" style={{ border: '0.5px solid var(--border)' }}>
+              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Quick actions</div>
+              <Link href={`/portfolio/new?ticker=${security.ticker}`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ add to portfolio →</Link>
+              <Link href={`/journal/new?ticker=${security.ticker}`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ log a decision →</Link>
+              <Link href={`/stock/${security.ticker}/edit-score`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ edit score →</Link>
+              <Link href={`/stock/${security.ticker}/edit-thesis`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ edit thesis →</Link>
             </div>
 
             {/* Recent journal */}
-            <div className="p-4" style= border: '0.5px solid var(--border)' >
-              <div className="text-xs uppercase tracking-wider mb-3" style= color: 'var(--ink-faint)' >Recent decisions</div>
+            <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
+              <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--ink-faint)' }}>Recent decisions</div>
               {recentJournal.length === 0 ? (
-                <p className="text-xs" style= color: 'var(--ink-faint)' >No entries yet.</p>
+                <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>No entries yet.</p>
               ) : (
                 <div className="space-y-3">
                   {recentJournal.map(e => (
-                    <div key={e.id} className="text-xs pb-2" style= borderBottom: '0.5px solid var(--border)' >
+                    <div key={e.id} className="text-xs pb-2" style={{ borderBottom: '0.5px solid var(--border)' }}>
                       <div className="flex justify-between mb-0.5">
-                        <span className="font-mono uppercase" style= color: 'var(--accent)' >{e.action}</span>
-                        <span style= color: 'var(--ink-faint)' >{e.created_at.split('T')[0]}</span>
+                        <span className="font-mono uppercase" style={{ color: 'var(--accent)' }}>{e.action}</span>
+                        <span style={{ color: 'var(--ink-faint)' }}>{e.created_at.split('T')[0]}</span>
                       </div>
-                      <p className="font-serif" style= color: 'var(--ink-muted)' >
+                      <p className="font-serif" style={{ color: 'var(--ink-muted)' }}>
                         {(e.reasoning ?? '').slice(0, 90)}{(e.reasoning ?? '').length > 90 ? '...' : ''}
                       </p>
                     </div>
@@ -201,16 +201,16 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
             </div>
 
             {/* Metadata */}
-            <div className="p-4 space-y-2" style= border: '0.5px solid var(--border)' >
-              <div className="text-xs uppercase tracking-wider mb-2" style= color: 'var(--ink-faint)' >Details</div>
+            <div className="p-4 space-y-2" style={{ border: '0.5px solid var(--border)' }}>
+              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Details</div>
               {[
                 { label: 'Source', val: security.source },
                 { label: 'Added', val: security.date_added },
                 { label: 'Sector', val: security.sector },
               ].map(({ label, val }) => val && (
                 <div key={label} className="flex justify-between text-xs">
-                  <span style= color: 'var(--ink-faint)' >{label}</span>
-                  <span className="font-mono" style= color: 'var(--ink-muted)' >{val}</span>
+                  <span style={{ color: 'var(--ink-faint)' }}>{label}</span>
+                  <span className="font-mono" style={{ color: 'var(--ink-muted)' }}>{val}</span>
                 </div>
               ))}
             </div>
