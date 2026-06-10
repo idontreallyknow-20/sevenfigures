@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import { Nav } from '@/components/Nav'
 import { DemoBanner } from '@/components/DemoBanner'
 import { TierBadge } from '@/components/TierBadge'
+import { Sparkline } from '@/components/Sparkline'
 import type { Score, Tier, QuoteData } from '@/lib/types'
 
 interface Row {
@@ -27,6 +28,7 @@ function tierOrder(t: Tier) {
 
 export function WatchlistClient({ rows: initialRows }: { rows: Row[] }) {
   const [quotes, setQuotes] = useState<Record<string, QuoteData>>({})
+  const [spark, setSpark] = useState<Record<string, { date: string; close: number }[]>>({})
   const [sortKey, setSortKey] = useState<SortKey>('total')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [showDemo, setShowDemo] = useState(false)
@@ -47,6 +49,22 @@ export function WatchlistClient({ rows: initialRows }: { rows: Row[] }) {
     const id = setInterval(fetchQuotes, 60000)
     return () => clearInterval(id)
   }, [fetchQuotes])
+
+  // 30-day mini chart per row (fetched once).
+  useEffect(() => {
+    let cancelled = false
+    Promise.all(
+      initialRows.map(r =>
+        fetch(`/api/bars?ticker=${r.ticker}&days=30`)
+          .then(res => res.json())
+          .then(d => [r.ticker, d.bars ?? []] as const)
+          .catch(() => [r.ticker, []] as const)
+      )
+    ).then(entries => {
+      if (!cancelled) setSpark(Object.fromEntries(entries))
+    })
+    return () => { cancelled = true }
+  }, [initialRows])
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -94,6 +112,7 @@ export function WatchlistClient({ rows: initialRows }: { rows: Row[] }) {
                 <th className="text-left py-2 px-3 font-mono text-2xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Ticker</th>
                 <th className="text-left py-2 px-3 font-mono text-2xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Name</th>
                 <th className="text-left py-2 px-3 font-mono text-2xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Theme</th>
+                <th className="text-center py-2 px-3 font-mono text-2xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>30d</th>
                 <th className="text-right py-2 px-3 font-mono text-2xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Price</th>
                 <th className="text-right py-2 px-3 font-mono text-2xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Chg%</th>
                 <SortHead k="total" label="Score" />
@@ -120,6 +139,18 @@ export function WatchlistClient({ rows: initialRows }: { rows: Row[] }) {
                     </td>
                     <td className="py-2.5 px-3 text-xs" style={{ color: 'var(--ink)' }}>{row.name}</td>
                     <td className="py-2.5 px-3 text-xs" style={{ color: 'var(--ink-muted)' }}>{row.theme}</td>
+                    <td className="py-2.5 px-3" style={{ width: 90 }}>
+                      {spark[row.ticker]?.length > 1 ? (
+                        <div style={{ width: 80 }}>
+                          <Sparkline
+                            data={spark[row.ticker]}
+                            positive={spark[row.ticker][spark[row.ticker].length - 1].close >= spark[row.ticker][0].close}
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-2xs" style={{ color: 'var(--ink-faint)' }}>—</span>
+                      )}
+                    </td>
                     <td className="py-2.5 px-3 text-right font-mono text-sm" style={{ color: 'var(--ink)' }}>
                       {q ? `$${q.price.toFixed(2)}` : '—'}
                     </td>

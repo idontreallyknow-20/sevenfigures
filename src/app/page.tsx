@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { computeTotal, computeTier, type Security, type Score } from '@/lib/types'
+import { SEED_SECURITIES, SEED_SCORES } from '@/lib/seed'
 import { WatchlistClient } from './WatchlistClient'
 
 async function getData() {
@@ -7,10 +8,13 @@ async function getData() {
     supabase.from('securities').select('*'),
     supabase.from('scores').select('*'),
   ])
-  return {
-    securities: (secRes.data ?? []) as Security[],
-    scores: (scoreRes.data ?? []) as Score[],
+  const securities = (secRes.data ?? []) as Security[]
+  // Never let the watchlist look empty: fall back to the seed list when there
+  // are no rows yet (fresh / unconfigured DB).
+  if (securities.length === 0) {
+    return { securities: SEED_SECURITIES, scores: Object.values(SEED_SCORES) }
   }
+  return { securities, scores: (scoreRes.data ?? []) as Score[] }
 }
 
 export default async function HomePage() {
