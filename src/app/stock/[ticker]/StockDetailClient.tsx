@@ -1,15 +1,27 @@
 'use client'
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { TierBadge } from '@/components/TierBadge'
-import { ScoreRadar } from '@/components/ScoreRadar'
-import { PriceChart } from '@/components/PriceChart'
 import { MetricsRow } from '@/components/MetricsRow'
-import { QualityCard } from '@/components/QualityCard'
 import { EditableText } from '@/components/ThesisRisksCard'
 import { DemoBanner } from '@/components/DemoBanner'
 import type { Security, Score, Thesis, JournalEntry, Tier, QuoteData, QualityScore } from '@/lib/types'
 import type { Metrics } from '@/lib/finnhub'
+
+// Recharts is heavy; load the charts after the page text so it paints first.
+const PriceChart = dynamic(() => import('@/components/PriceChart').then(m => m.PriceChart), {
+  ssr: false,
+  loading: () => <div className="skeleton h-[228px]" />,
+})
+const ScoreRadar = dynamic(() => import('@/components/ScoreRadar').then(m => m.ScoreRadar), {
+  ssr: false,
+  loading: () => <div className="skeleton h-[260px]" />,
+})
+const QualityCard = dynamic(() => import('@/components/QualityCard').then(m => m.QualityCard), {
+  ssr: false,
+  loading: () => <div className="skeleton h-[320px]" />,
+})
 
 const DIMS = [
   { key: 'moat' as const, label: 'Moat', desc: 'Durable competitive advantage' },
@@ -29,39 +41,45 @@ interface Props {
   recentJournal: JournalEntry[]
   total: number
   tier: Tier
+  demoPrices: boolean
 }
 
-export function StockDetailClient({ security, score, thesis, quality, recentJournal, total, tier }: Props) {
+export function StockDetailClient({ security, score, thesis, quality, recentJournal, total, tier, demoPrices }: Props) {
   const [quote, setQuote] = useState<QuoteData | null>(null)
-  const [bars, setBars] = useState<{ date: string; close: number }[]>([])
+  const [bars, setBars] = useState<{ date: string; close: number }[] | null>(null)
   const [metrics, setMetrics] = useState<Metrics | null>(null)
-  const [isDemo, setIsDemo] = useState(false)
+  const [isDemo, setIsDemo] = useState(demoPrices)
 
   useEffect(() => {
     fetch(`/api/quotes?tickers=${security.ticker}`)
       .then(r => r.json())
       .then(d => {
         const q = d.quotes?.[security.ticker]
-        if (q) { setQuote(q); setIsDemo(q.isDemo ?? false) }
+        if (q) { setQuote(q); setIsDemo(demoPrices || !!q.isDemo) }
       })
+      .catch(() => {})
     // 5Y of history so the 1M / 6M / 1Y / 5Y toggles all have data.
     fetch(`/api/bars?ticker=${security.ticker}&days=1825`)
       .then(r => r.json())
       .then(d => setBars(d.bars ?? []))
+      .catch(() => setBars([]))
     fetch(`/api/metrics?ticker=${security.ticker}`)
       .then(r => r.json())
       .then(d => setMetrics(d.metrics ?? null))
       .catch(() => {})
-  }, [security.ticker])
+  }, [security.ticker, demoPrices])
 
   const chg = quote?.changePercent ?? 0
 
   return (
-    <div>
+    <>
       {isDemo && <DemoBanner />}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <nav aria-label="Breadcrumb" className="text-xs mb-4" style={{ color: 'var(--ink-faint)' }}>
+          <Link href="/" className="link">Watchlist</Link> / {security.ticker}
+        </nav>
         {/* ---- Header ---- */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="font-serif text-3xl font-light">{security.ticker}</h1>
@@ -74,10 +92,10 @@ export function StockDetailClient({ security, score, thesis, quality, recentJour
           </div>
           <div className="text-right">
             <div className="font-mono text-2xl font-medium">
-              {quote ? `$${quote.price.toFixed(2)}` : '—'}
+              {quote ? `$${quote.price.toFixed(2)}` : <span className="skeleton inline-block h-7 w-24 align-middle" />}
             </div>
             {quote && (
-              <div className="font-mono text-sm" style={{ color: chg >= 0 ? '#1a5c35' : '#7a1a1a' }}>
+              <div className="font-mono text-sm" style={{ color: chg >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
                 {chg >= 0 ? '+' : ''}{chg.toFixed(2)}%
               </div>
             )}
@@ -136,20 +154,20 @@ export function StockDetailClient({ security, score, thesis, quality, recentJour
                               style={{
                                 background: n <= val ? 'var(--accent)' : 'transparent',
                                 border: `0.5px solid ${n <= val ? 'var(--accent)' : 'var(--border)'}`,
-                                color: n <= val ? 'white' : 'var(--ink-faint)',
+                                color: n <= val ? 'var(--on-accent)' : 'var(--ink-faint)',
                               }}
                             >
                               {n}
                             </div>
                           ))}
                         </div>
-                        <span className="text-2xs" style={{ color: 'var(--ink-faint)' }}>{desc}</span>
+                        <span className="text-2xs hidden sm:inline" style={{ color: 'var(--ink-faint)' }}>{desc}</span>
                       </div>
                     )
                   })}
                 </div>
                 <div className="mt-4 pt-3" style={{ borderTop: '0.5px solid var(--border)' }}>
-                  <Link href={`/stock/${security.ticker}/edit-score`} className="text-xs" style={{ color: 'var(--accent)' }}>edit conviction →</Link>
+                  <Link href={`/stock/${security.ticker}/edit-score`} className="link text-xs">edit conviction →</Link>
                 </div>
               </div>
             )}
@@ -159,6 +177,14 @@ export function StockDetailClient({ security, score, thesis, quality, recentJour
           <div className="space-y-4">
             {/* Quality breakdown (valuation / growth / moat / momentum) — editable */}
             <QualityCard ticker={security.ticker} initial={quality} />
+
+            {!score && (
+              <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
+                <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Conviction score</div>
+                <p className="text-xs mb-3" style={{ color: 'var(--ink-muted)' }}>Not scored yet.</p>
+                <Link href={`/stock/${security.ticker}/edit-score`} className="link text-xs">+ score it →</Link>
+              </div>
+            )}
 
             {score && (
               <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
@@ -170,10 +196,10 @@ export function StockDetailClient({ security, score, thesis, quality, recentJour
             {/* Quick actions */}
             <div className="p-3 space-y-1.5" style={{ border: '0.5px solid var(--border)' }}>
               <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Quick actions</div>
-              <Link href={`/portfolio/new?ticker=${security.ticker}`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ add to portfolio →</Link>
-              <Link href={`/journal/new?ticker=${security.ticker}`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ log a decision →</Link>
-              <Link href={`/stock/${security.ticker}/edit-score`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ edit conviction →</Link>
-              <Link href={`/stock/${security.ticker}/edit-thesis`} className="block text-xs py-1" style={{ color: 'var(--accent)' }}>+ structured thesis →</Link>
+              <Link href={`/portfolio/new?ticker=${security.ticker}`} className="link block text-xs py-1">+ add to portfolio →</Link>
+              <Link href={`/journal/new?ticker=${security.ticker}`} className="link block text-xs py-1">+ log a decision →</Link>
+              <Link href={`/stock/${security.ticker}/edit-score`} className="link block text-xs py-1">+ edit conviction →</Link>
+              <Link href={`/stock/${security.ticker}/edit-thesis`} className="link block text-xs py-1">+ structured thesis →</Link>
             </div>
 
             {/* Recent journal */}
@@ -215,6 +241,6 @@ export function StockDetailClient({ security, score, thesis, quality, recentJour
           </div>
         </div>
       </main>
-    </div>
+    </>
   )
 }

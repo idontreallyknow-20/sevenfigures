@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, hasSupabase, NO_DB_MESSAGE } from '@/lib/supabase'
 
 interface Props {
   ticker: string
@@ -20,13 +20,14 @@ export function EditableText({ ticker, label, field, initial, placeholder }: Pro
   const [error, setError] = useState('')
 
   async function save() {
+    if (!hasSupabase) { setError(NO_DB_MESSAGE); return }
     setSaving(true)
     setError('')
     const { error: err } = await supabase
       .from('theses')
       .upsert({ ticker, [field]: draft, updated_at: new Date().toISOString() })
     setSaving(false)
-    if (err) { setError('Save failed (is the DB configured?)'); return }
+    if (err) { setError(err.message); return }
     setValue(draft)
     setEditing(false)
   }
@@ -37,17 +38,19 @@ export function EditableText({ ticker, label, field, initial, placeholder }: Pro
         <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>{label}</span>
         {editing ? (
           <div className="flex gap-3">
-            <button onClick={() => { setDraft(value); setEditing(false); setError('') }} className="text-xs" style={{ color: 'var(--ink-faint)' }}>cancel</button>
-            <button onClick={save} disabled={saving} className="text-xs" style={{ color: 'var(--accent)' }}>{saving ? 'saving…' : 'save'}</button>
+            <button onClick={() => { setDraft(value); setEditing(false); setError('') }} className="text-xs" style={{ color: 'var(--ink-muted)' }}>cancel</button>
+            <button onClick={save} disabled={saving} className="link text-xs">{saving ? 'saving…' : 'save'}</button>
           </div>
         ) : (
-          <button onClick={() => { setDraft(value); setEditing(true) }} className="text-xs" style={{ color: 'var(--accent)' }}>edit</button>
+          <button onClick={() => { setDraft(value); setEditing(true) }} className="link text-xs" aria-label={`Edit ${label.toLowerCase()}`}>edit</button>
         )}
       </div>
       {editing ? (
         <textarea
           value={draft}
           onChange={e => setDraft(e.target.value)}
+          aria-label={label}
+          autoFocus
           placeholder={placeholder}
           rows={5}
           className="w-full px-3 py-2 font-serif text-sm leading-relaxed outline-none resize-y"
@@ -58,7 +61,7 @@ export function EditableText({ ticker, label, field, initial, placeholder }: Pro
       ) : (
         <p className="font-serif text-sm" style={{ color: 'var(--ink-faint)' }}>{placeholder}</p>
       )}
-      {error && <p className="text-2xs mt-2" style={{ color: '#7a1a1a' }}>{error}</p>}
+      {error && <p role="alert" className="text-2xs mt-2" style={{ color: 'var(--negative)' }}>{error}</p>}
     </div>
   )
 }

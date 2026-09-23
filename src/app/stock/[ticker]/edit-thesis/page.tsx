@@ -1,15 +1,16 @@
+import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { ThemeProvider } from '@/components/ThemeProvider'
-import { Nav } from '@/components/Nav'
+import { cleanTicker } from '@/lib/ticker'
+import { formMetadata } from '@/lib/noindex'
 import { ThesisEditorClient } from './ThesisEditorClient'
 
+export function generateMetadata({ params }: { params: { ticker: string } }) {
+  return formMetadata(`Edit thesis: ${params.ticker.toUpperCase()}`)
+}
+
 export default async function EditThesisPage({ params }: { params: { ticker: string } }) {
-  const ticker = params.ticker.toUpperCase()
-  const { data: thesis } = await supabase.from('theses').select('*').eq('ticker', ticker).single()
-  return (
-    <ThemeProvider>
-      <Nav />
-      <ThesisEditorClient ticker={ticker} initialThesis={thesis} />
-    </ThemeProvider>
-  )
+  const ticker = cleanTicker(params.ticker)
+  if (!ticker) notFound()
+  const { data: thesis } = await supabase.from('theses').select('*').eq('ticker', ticker).maybeSingle()
+  return <ThesisEditorClient ticker={ticker} initialThesis={thesis} />
 }

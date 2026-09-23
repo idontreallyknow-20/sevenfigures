@@ -5,12 +5,13 @@ import {
 } from 'recharts'
 
 interface Props {
-  data: { date: string; close: number }[]
+  data: { date: string; close: number }[] | null
   ticker: string
 }
 
 type Range = '1M' | '6M' | '1Y' | '5Y'
-const CUT: Record<Range, number> = { '1M': 30, '6M': 182, '1Y': 365, '5Y': 9999 }
+// Bars are trading days, so ranges are counted in sessions (~21 per month).
+const CUT: Record<Range, number> = { '1M': 21, '6M': 126, '1Y': 252, '5Y': 1260 }
 
 function TooltipContent({ active, payload }: { active?: boolean; payload?: Array<{ value: number; payload: { date: string } }> }) {
   if (!active || !payload?.length) return null
@@ -26,12 +27,14 @@ function TooltipContent({ active, payload }: { active?: boolean; payload?: Array
 
 export function PriceChart({ data, ticker }: Props) {
   const [range, setRange] = useState<Range>('1M')
+  if (data === null) return <div className="skeleton h-[228px]" aria-label="Loading price chart" />
+
   const filtered = data.slice(-CUT[range])
 
   if (filtered.length === 0) {
     return (
       <div className="h-44 flex items-center justify-center text-xs" style={{ color: 'var(--ink-faint)' }}>
-        no price data
+        No price history for {ticker}.
       </div>
     )
   }
@@ -39,7 +42,7 @@ export function PriceChart({ data, ticker }: Props) {
   const first = filtered[0].close
   const last = filtered[filtered.length - 1].close
   const positive = last >= first
-  const color = positive ? '#1a5c35' : '#7a1a1a'
+  const color = positive ? 'var(--positive)' : 'var(--negative)'
   const values = filtered.map(d => d.close)
   const minVal = Math.min(...values)
   const maxVal = Math.max(...values)
@@ -50,7 +53,7 @@ export function PriceChart({ data, ticker }: Props) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-xs" style={{ color: positive ? '#1a5c35' : '#7a1a1a' }}>
+          <span className="font-mono text-xs" style={{ color: positive ? 'var(--positive)' : 'var(--negative)' }}>
             {changePct >= 0 ? '+' : ''}{changePct.toFixed(2)}%
           </span>
           <span className="text-2xs" style={{ color: 'var(--ink-faint)' }}>
@@ -62,10 +65,11 @@ export function PriceChart({ data, ticker }: Props) {
             <button
               key={r}
               onClick={() => setRange(r)}
+              aria-pressed={range === r}
               className="px-2 py-0.5 text-2xs font-mono transition-colors"
               style={{
                 background: range === r ? 'var(--accent)' : 'transparent',
-                color: range === r ? 'white' : 'var(--ink-muted)',
+                color: range === r ? 'var(--on-accent)' : 'var(--ink-muted)',
                 border: `0.5px solid ${range === r ? 'var(--accent)' : 'var(--border)'}`,
               }}
             >
@@ -84,7 +88,7 @@ export function PriceChart({ data, ticker }: Props) {
           </defs>
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' }}
+            tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'var(--font-mono)' }}
             tickLine={false}
             axisLine={false}
             tickFormatter={d => d.slice(5)}
@@ -92,7 +96,7 @@ export function PriceChart({ data, ticker }: Props) {
           />
           <YAxis
             domain={[minVal - pad, maxVal + pad]}
-            tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' }}
+            tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'var(--font-mono)' }}
             tickLine={false}
             axisLine={false}
             tickFormatter={v => `$${Number(v).toFixed(0)}`}

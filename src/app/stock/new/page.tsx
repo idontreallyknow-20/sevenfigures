@@ -1,9 +1,12 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { ThemeProvider } from '@/components/ThemeProvider'
-import { Nav } from '@/components/Nav'
+import { supabase, hasSupabase, NO_DB_MESSAGE } from '@/lib/supabase'
+import { cleanTicker } from '@/lib/ticker'
+import { FormError } from '@/components/FormError'
+
+const LABEL = 'text-xs uppercase tracking-wider flex items-center gap-2'
+const INPUT = { background: 'transparent', border: '0.5px solid var(--border)', color: 'var(--ink)' }
 
 function fmtCap(v: number | null): string {
   if (v == null) return ''
@@ -16,7 +19,8 @@ function fmtCap(v: number | null): string {
 export default function NewStockPage() {
   const router = useRouter()
   const [form, setForm] = useState({ ticker: '', name: '', theme: '', sector: '', source: 'own screen' })
-  const [marketCap, setMarketCap] = useState<string>('')
+  const [marketCap, setMarketCap] = useState('')
+  const [fetchedFor, setFetchedFor] = useState('')
   const [fetching, setFetching] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -24,16 +28,16 @@ export default function NewStockPage() {
   function set(k: keyof typeof form, v: string) { setForm(prev => ({ ...prev, [k]: v })) }
 
   // On blur of the ticker field, pull name / sector / market cap from the
-  // profile endpoint so I only have to pick the theme by hand.
+  // profile endpoint so only the theme has to be picked by hand.
   async function autofill() {
-    const ticker = form.ticker.trim().toUpperCase()
-    if (!ticker) return
+    const ticker = cleanTicker(form.ticker)
+    if (!ticker || ticker === fetchedFor) return
     setFetching(true)
     setError('')
     try {
       const res = await fetch(`/api/profile?ticker=${ticker}`)
-      const data = await res.json()
-      const p = data.profile
+      if (!res.ok) throw new Error()
+      const p = (await res.json()).profile
       if (p) {
         setForm(prev => ({
           ...prev,
@@ -42,125 +46,134 @@ export default function NewStockPage() {
         }))
         setMarketCap(fmtCap(p.marketCap ?? null))
       }
+      setFetchedFor(ticker)
     } catch {
-      setError('Could not auto-fetch profile')
+      setError('Couldn’t auto-fill the company details. You can type them in.')
     } finally {
       setFetching(false)
     }
   }
 
-  async function save() {
-    if (!form.ticker || !form.name) { setError('Ticker and name are required'); return }
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    const ticker = cleanTicker(form.ticker)
+    if (!ticker) { setError('Enter a valid ticker, e.g. NVDA.'); return }
+    if (!form.name.trim()) { setError('Company name is required.'); return }
+    if (!hasSupabase) { setError(NO_DB_MESSAGE); return }
     setSaving(true)
+    setError('')
     const { error: err } = await supabase.from('securities').insert({
-      ticker: form.ticker.toUpperCase(),
-      name: form.name,
-      theme: form.theme || null,
-      sector: form.sector || null,
+      ticker,
+      name: form.name.trim(),
+      theme: form.theme.trim() || null,
+      sector: form.sector.trim() || null,
       source: form.source || 'own screen',
       date_added: new Date().toISOString().split('T')[0],
     })
-    if (err) { setError(err.message); setSaving(false); return }
-    router.push(`/stock/${form.ticker.toUpperCase()}/edit-score`)
+    if (err) {
+      setError(err.code === '23505' ? `${ticker} is already on your watchlist.` : err.message)
+      setSaving(false)
+      return
+    }
+    router.push(`/stock/${ticker}/edit-score`)
   }
 
   return (
-    <ThemeProvider>
-      <Nav />
-      <main className="max-w-lg mx-auto px-6 py-8">
-        <h1 className="font-serif text-2xl font-light mb-1">Add security</h1>
-        <p className="text-xs mb-6" style={{ color: 'var(--ink-faint)' }}>
-          Type a ticker and tab out — name, sector and market cap fill in automatically. You just pick the theme.
-        </p>
+    <main className="max-w-lg mx-auto px-4 sm:px-6 py-8">
+      <h1 className="font-serif text-3xl font-light mb-1">Add security</h1>
+      <p className="text-xs mb-6" style={{ color: 'var(--ink-muted)' }}>
+        Type a ticker and tab out. Name, sector and market cap fill in automatically, so you only pick the theme.
+      </p>
+      <form onSubmit={save} noValidate>
         <div className="space-y-4">
-          {/* Ticker — drives the autofill */}
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Ticker</label>
+            <label htmlFor="s-ticker" className={LABEL} style={{ color: 'var(--ink-muted)' }}>Ticker</label>
             <div className="relative">
               <input
+                id="s-ticker"
                 type="text"
                 value={form.ticker}
                 onChange={e => set('ticker', e.target.value.toUpperCase())}
                 onBlur={autofill}
                 placeholder="NVDA"
+                autoComplete="off"
                 className="w-full px-3 py-2 font-mono text-sm outline-none"
-                style={{ background: 'transparent', border: '0.5px solid var(--border)', color: 'var(--ink)' }}
+                style={INPUT}
               />
               {fetching && <span className="absolute right-3 top-2.5 text-2xs font-mono" style={{ color: 'var(--ink-faint)' }}>fetching…</span>}
             </div>
           </div>
 
-          {/* Auto-filled: name */}
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--ink-faint)' }}>
+            <label htmlFor="s-name" className={LABEL} style={{ color: 'var(--ink-muted)' }}>
               Name <span className="text-2xs lowercase" style={{ color: 'var(--accent)' }}>auto</span>
             </label>
             <input
+              id="s-name"
               type="text"
               value={form.name}
               onChange={e => set('name', e.target.value)}
               placeholder="NVIDIA Corporation"
               className="w-full px-3 py-2 font-mono text-sm outline-none"
-              style={{ background: 'transparent', border: '0.5px solid var(--border)', color: 'var(--ink)' }}
+              style={INPUT}
             />
           </div>
 
-          {/* Auto-filled: sector */}
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--ink-faint)' }}>
+            <label htmlFor="s-sector" className={LABEL} style={{ color: 'var(--ink-muted)' }}>
               Sector <span className="text-2xs lowercase" style={{ color: 'var(--accent)' }}>auto</span>
             </label>
             <input
+              id="s-sector"
               type="text"
               value={form.sector}
               onChange={e => set('sector', e.target.value)}
               placeholder="Information Technology"
               className="w-full px-3 py-2 font-mono text-sm outline-none"
-              style={{ background: 'transparent', border: '0.5px solid var(--border)', color: 'var(--ink)' }}
+              style={INPUT}
             />
           </div>
 
-          {/* Auto-filled (display only): market cap */}
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--ink-faint)' }}>
+            <span className={LABEL} style={{ color: 'var(--ink-muted)' }}>
               Market cap <span className="text-2xs lowercase" style={{ color: 'var(--accent)' }}>auto</span>
-            </label>
+            </span>
             <div className="px-3 py-2 font-mono text-sm" style={{ border: '0.5px solid var(--border)', color: marketCap ? 'var(--ink)' : 'var(--ink-faint)' }}>
               {marketCap || '—'}
             </div>
           </div>
 
-          {/* Manual: theme */}
           <div className="space-y-1.5">
-            <label className="text-xs uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--ink-faint)' }}>
+            <label htmlFor="s-theme" className={LABEL} style={{ color: 'var(--ink-muted)' }}>
               Theme <span className="text-2xs lowercase" style={{ color: 'var(--ink-faint)' }}>manual</span>
             </label>
             <input
+              id="s-theme"
               type="text"
               value={form.theme}
               onChange={e => set('theme', e.target.value)}
               placeholder="AI compute"
               className="w-full px-3 py-2 font-mono text-sm outline-none"
-              style={{ background: 'transparent', border: '0.5px solid var(--border)', color: 'var(--ink)' }}
+              style={INPUT}
             />
           </div>
 
-          {error && <p className="text-xs" style={{ color: '#7a1a1a' }}>{error}</p>}
+          <FormError message={error} />
         </div>
         <div className="mt-6 flex gap-3">
           <button
-            onClick={save}
-            disabled={saving}
+            type="submit"
+            disabled={saving || fetching}
             className="px-4 py-2 text-xs font-mono uppercase tracking-wider"
-            style={{ background: 'var(--accent)', color: 'white', opacity: saving ? 0.7 : 1 }}
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: saving || fetching ? 0.7 : 1 }}
           >
-            {saving ? 'saving...' : 'add & score'}
+            {saving ? 'saving…' : 'add & score'}
           </button>
-          <button onClick={() => router.back()} className="px-4 py-2 text-xs font-mono uppercase tracking-wider" style={{ border: '0.5px solid var(--border)', color: 'var(--ink-muted)' }}>
+          <button type="button" onClick={() => router.back()} className="px-4 py-2 text-xs font-mono uppercase tracking-wider" style={{ border: '0.5px solid var(--border)', color: 'var(--ink-muted)' }}>
             cancel
           </button>
         </div>
-      </main>
-    </ThemeProvider>
+      </form>
+    </main>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts'
-import { supabase } from '@/lib/supabase'
+import { supabase, hasSupabase, NO_DB_MESSAGE } from '@/lib/supabase'
 import { QUALITY_DIMS, type QualityScore, type QualityDim } from '@/lib/types'
 
 const LABELS: Record<QualityDim, string> = {
@@ -24,16 +24,17 @@ export function QualityCard({ ticker, initial }: { ticker: string; initial: Qual
   const [error, setError] = useState('')
 
   const data = QUALITY_DIMS.map(dim => ({ dim: LABELS[dim], value: vals[dim] }))
-  const accent = '#1f4a3a'
+  const accent = 'var(--accent)'
 
   async function save() {
+    if (!hasSupabase) { setError(NO_DB_MESSAGE); return }
     setSaving(true)
     setError('')
     const { error: err } = await supabase
       .from('quality_scores')
       .upsert({ ticker, ...vals, updated_at: new Date().toISOString() })
     setSaving(false)
-    if (err) { setError('Save failed (is the DB configured?)'); return }
+    if (err) { setError(err.message); return }
     setEditing(false)
   }
 
@@ -42,9 +43,8 @@ export function QualityCard({ ticker, initial }: { ticker: string; initial: Qual
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Quality breakdown</span>
         <button
-          onClick={() => setEditing(e => !e)}
-          className="text-xs"
-          style={{ color: 'var(--accent)' }}
+          onClick={() => { if (editing) setVals(toVals(initial)); setEditing(e => !e); setError('') }}
+          className="link text-xs"
         >
           {editing ? 'cancel' : 'edit'}
         </button>
@@ -53,7 +53,7 @@ export function QualityCard({ ticker, initial }: { ticker: string; initial: Qual
       <ResponsiveContainer width="100%" height={220}>
         <RadarChart data={data} margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
           <PolarGrid stroke="var(--border)" />
-          <PolarAngleAxis dataKey="dim" tick={{ fontSize: 11, fill: 'var(--ink-muted)', fontFamily: 'IBM Plex Mono' }} />
+          <PolarAngleAxis dataKey="dim" tick={{ fontSize: 11, fill: 'var(--ink-muted)', fontFamily: 'var(--font-mono)' }} />
           <PolarRadiusAxis domain={[0, 5]} tick={false} axisLine={false} />
           <Radar dataKey="value" stroke={accent} fill={accent} fillOpacity={0.14} strokeWidth={1.5} />
         </RadarChart>
@@ -69,11 +69,13 @@ export function QualityCard({ ticker, initial }: { ticker: string; initial: Qual
                   <button
                     key={n}
                     onClick={() => setVals(v => ({ ...v, [dim]: n }))}
+                    aria-pressed={vals[dim] === n}
+                    aria-label={`${LABELS[dim]} ${n}`}
                     className="w-7 h-7 text-2xs font-mono"
                     style={{
                       background: vals[dim] === n ? 'var(--accent)' : 'transparent',
                       border: `0.5px solid ${vals[dim] === n ? 'var(--accent)' : 'var(--border)'}`,
-                      color: vals[dim] === n ? 'white' : 'var(--ink-faint)',
+                      color: vals[dim] === n ? 'var(--on-accent)' : 'var(--ink-faint)',
                     }}
                   >
                     {n}
@@ -82,14 +84,14 @@ export function QualityCard({ ticker, initial }: { ticker: string; initial: Qual
               </div>
             </div>
           ))}
-          {error && <p className="text-2xs" style={{ color: '#7a1a1a' }}>{error}</p>}
+          {error && <p role="alert" className="text-2xs" style={{ color: 'var(--negative)' }}>{error}</p>}
           <button
             onClick={save}
             disabled={saving}
             className="px-3 py-1.5 text-xs font-mono uppercase tracking-wider"
-            style={{ background: 'var(--accent)', color: 'white', opacity: saving ? 0.7 : 1 }}
+            style={{ background: 'var(--accent)', color: 'var(--on-accent)', opacity: saving ? 0.7 : 1 }}
           >
-            {saving ? 'saving...' : 'save'}
+            {saving ? 'saving…' : 'save'}
           </button>
         </div>
       ) : (

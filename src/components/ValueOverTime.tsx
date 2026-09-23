@@ -20,7 +20,7 @@ export function ValueOverTime({ data }: { data: Point[] }) {
   const first = data[0].value
   const last = data[data.length - 1].value
   const positive = last >= first
-  const color = positive ? '#1a5c35' : '#7a1a1a'
+  const color = positive ? 'var(--positive)' : 'var(--negative)'
   const values = data.map(d => d.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
@@ -41,8 +41,8 @@ export function ValueOverTime({ data }: { data: Point[] }) {
               <stop offset="95%" stopColor={color} stopOpacity={0.01} />
             </linearGradient>
           </defs>
-          <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' }} tickLine={false} axisLine={false} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
-          <YAxis domain={[min - pad, max + pad]} tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'IBM Plex Mono' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(Number(v) / 1000).toFixed(0)}k`} width={44} />
+          <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'var(--font-mono)' }} tickLine={false} axisLine={false} tickFormatter={d => d.slice(5)} interval="preserveStartEnd" />
+          <YAxis domain={[min - pad, max + pad]} tick={{ fontSize: 9, fill: 'var(--ink-faint)', fontFamily: 'var(--font-mono)' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(Number(v) / 1000).toFixed(0)}k`} width={44} />
           <Tooltip content={<TooltipContent />} />
           <Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} fill="url(#pv-grad)" dot={false} activeDot={{ r: 3, stroke: color, strokeWidth: 1 }} />
         </AreaChart>

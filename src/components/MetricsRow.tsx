@@ -27,7 +27,7 @@ export function MetricsRow({ metrics }: { metrics: Metrics | null }) {
   const cells = [
     { label: 'P/E (TTM)', val: fmtNum(metrics?.peTTM ?? null) },
     { label: 'Fwd P/E', val: fmtNum(metrics?.forwardPE ?? null) },
-    { label: 'Rev growth', val: fmtPct(metrics?.revenueGrowth ?? null), color: metrics?.revenueGrowth != null ? (metrics.revenueGrowth >= 0 ? '#1a5c35' : '#7a1a1a') : undefined },
+    { label: 'Rev growth', val: fmtPct(metrics?.revenueGrowth ?? null), color: metrics?.revenueGrowth != null ? (metrics.revenueGrowth >= 0 ? 'var(--positive)' : 'var(--negative)') : undefined },
     { label: 'Gross margin', val: fmtNum(metrics?.grossMargin ?? null, '%') },
     { label: 'Market cap', val: fmtCap(metrics?.marketCap ?? null) },
     { label: '52w range', val: fmtRange(metrics?.week52Low ?? null, metrics?.week52High ?? null) },
