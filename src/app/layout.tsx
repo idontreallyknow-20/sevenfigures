@@ -6,7 +6,8 @@ import { Footer } from '@/components/Footer'
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, AUTHOR, structuredData } from '@/lib/site'
 import './globals.css'
 
-const serif = Newsreader({ subsets: ['latin'], axes: ['opsz'], variable: '--font-serif', display: 'swap' })
+// Newsreader has no metric overrides in next/font, so set the fallback by hand.
+const serif = Newsreader({ subsets: ['latin'], axes: ['opsz'], variable: '--font-serif', display: 'swap', adjustFontFallback: false, fallback: ['Georgia', 'serif'] })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['300', '400', '500'], variable: '--font-mono', display: 'swap' })
 
 export const metadata: Metadata = {
