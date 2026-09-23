@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase'
+import { getServiceClient, hasSupabase } from '@/lib/supabase'
 import { getBars } from '@/lib/alpaca'
 
 // Called daily by Vercel Cron (see vercel.json).
 // Captures today's closing price for every security in the watchlist.
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization')
+  // This endpoint writes to the database, so it stays locked unless CRON_SECRET is set
+  // and matches (Vercel Cron sends it as a Bearer token).
   const secret = process.env.CRON_SECRET
-  if (secret && auth !== `Bearer ${secret}`) {
+  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!hasSupabase || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
   const db = getServiceClient()
@@ -19,17 +23,14 @@ export async function GET(req: NextRequest) {
   const inserts: Array<{ ticker: string; price: number; captured_at: string }> = []
 
   for (const { ticker } of securities) {
-    try {
-      const bars = await getBars(ticker, 3)
-      const bar = bars.find(b => b.date === today) ?? bars[bars.length - 1]
-      if (bar) {
-        inserts.push({ ticker, price: bar.close, captured_at: new Date().toISOString() })
-      }
-    } catch {}
+    const bars = await getBars(ticker, 3)
+    const bar = bars.find(b => b.date === today) ?? bars[bars.length - 1]
+    if (bar) inserts.push({ ticker, price: bar.close, captured_at: new Date().toISOString() })
   }
 
   if (inserts.length > 0) {
-    await db.from('price_snapshots').insert(inserts)
+    const { error } = await db.from('price_snapshots').insert(inserts)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true, snaps: inserts.length, date: today })

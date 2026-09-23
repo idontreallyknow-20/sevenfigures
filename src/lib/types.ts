@@ -19,6 +19,19 @@ export interface Score {
   updated_at: string
 }
 
+// 4-component quality breakdown shown on the individual stock page (1-5 each).
+export interface QualityScore {
+  ticker: string
+  valuation: number
+  growth: number
+  moat: number
+  momentum: number
+  updated_at: string
+}
+
+export const QUALITY_DIMS = ['valuation', 'growth', 'moat', 'momentum'] as const
+export type QualityDim = (typeof QUALITY_DIMS)[number]
+
 export interface Thesis {
   ticker: string
   game_type: 'value' | 'growth' | 'thematic'
@@ -27,6 +40,8 @@ export interface Thesis {
   bail: string | null
   take: string | null
   falsifiability_note: string | null
+  thesis_text: string | null
+  risks: string | null
   updated_at: string
 }
 
@@ -48,20 +63,6 @@ export interface JournalEntry {
   reasoning: string | null
   expectation: string | null
   created_at: string
-}
-
-export interface PriceSnapshot {
-  id: string
-  ticker: string
-  price: number
-  captured_at: string
-}
-
-export interface Benchmark {
-  id: string
-  symbol: string
-  close: number
-  date: string
 }
 
 export type Tier = 'Core' | 'Buyable' | 'Watch' | 'Pass'

@@ -7,18 +7,15 @@ const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({ theme
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light')
 
+  // The inline script in the root layout has already set the class; just sync state to it.
   useEffect(() => {
-    const saved = localStorage.getItem('theme') as Theme | null
-    if (saved) {
-      setTheme(saved)
-      document.documentElement.classList.toggle('dark', saved === 'dark')
-    }
+    setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light')
   }, [])
 
   function toggle() {
     const next = theme === 'light' ? 'dark' : 'light'
     setTheme(next)
-    localStorage.setItem('theme', next)
+    try { localStorage.setItem('theme', next) } catch {}
     document.documentElement.classList.toggle('dark', next === 'dark')
   }
 

@@ -1,11 +1,27 @@
 'use client'
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { TierBadge } from '@/components/TierBadge'
-import { ScoreRadar } from '@/components/ScoreRadar'
-import { PriceChart } from '@/components/PriceChart'
+import { MetricsRow } from '@/components/MetricsRow'
+import { EditableText } from '@/components/ThesisRisksCard'
 import { DemoBanner } from '@/components/DemoBanner'
-import type { Security, Score, Thesis, JournalEntry, Tier, QuoteData } from '@/lib/types'
+import type { Security, Score, Thesis, JournalEntry, Tier, QuoteData, QualityScore } from '@/lib/types'
+import type { Metrics } from '@/lib/finnhub'
+
+// Recharts is heavy; load the charts after the page text so it paints first.
+const PriceChart = dynamic(() => import('@/components/PriceChart').then(m => m.PriceChart), {
+  ssr: false,
+  loading: () => <div className="skeleton h-[228px]" />,
+})
+const ScoreRadar = dynamic(() => import('@/components/ScoreRadar').then(m => m.ScoreRadar), {
+  ssr: false,
+  loading: () => <div className="skeleton h-[260px]" />,
+})
+const QualityCard = dynamic(() => import('@/components/QualityCard').then(m => m.QualityCard), {
+  ssr: false,
+  loading: () => <div className="skeleton h-[320px]" />,
+})
 
 const DIMS = [
   { key: 'moat' as const, label: 'Moat', desc: 'Durable competitive advantage' },
@@ -21,72 +37,107 @@ interface Props {
   security: Security
   score: Score | null
   thesis: Thesis | null
+  quality: QualityScore
   recentJournal: JournalEntry[]
   total: number
   tier: Tier
+  demoPrices: boolean
 }
 
-export function StockDetailClient({ security, score, thesis, recentJournal, total, tier }: Props) {
+export function StockDetailClient({ security, score, thesis, quality, recentJournal, total, tier, demoPrices }: Props) {
   const [quote, setQuote] = useState<QuoteData | null>(null)
-  const [bars, setBars] = useState<{ date: string; close: number }[]>([])
-  const [isDemo, setIsDemo] = useState(false)
+  const [bars, setBars] = useState<{ date: string; close: number }[] | null>(null)
+  const [metrics, setMetrics] = useState<Metrics | null>(null)
+  const [isDemo, setIsDemo] = useState(demoPrices)
 
   useEffect(() => {
     fetch(`/api/quotes?tickers=${security.ticker}`)
       .then(r => r.json())
       .then(d => {
         const q = d.quotes?.[security.ticker]
-        if (q) { setQuote(q); setIsDemo(q.isDemo ?? false) }
+        if (q) { setQuote(q); setIsDemo(demoPrices || !!q.isDemo) }
       })
-    // 180 days so all range buttons (1W / 1M / 3M / 6M / ALL) work
-    fetch(`/api/bars?ticker=${security.ticker}&days=180`)
+      .catch(() => {})
+    // 5Y of history so the 1M / 6M / 1Y / 5Y toggles all have data.
+    fetch(`/api/bars?ticker=${security.ticker}&days=1825`)
       .then(r => r.json())
       .then(d => setBars(d.bars ?? []))
-  }, [security.ticker])
+      .catch(() => setBars([]))
+    fetch(`/api/metrics?ticker=${security.ticker}`)
+      .then(r => r.json())
+      .then(d => setMetrics(d.metrics ?? null))
+      .catch(() => {})
+  }, [security.ticker, demoPrices])
+
+  const chg = quote?.changePercent ?? 0
 
   return (
-    <div>
+    <>
       {isDemo && <DemoBanner />}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <nav aria-label="Breadcrumb" className="text-xs mb-4" style={{ color: 'var(--ink-faint)' }}>
+          <Link href="/" className="link">Watchlist</Link> / {security.ticker}
+        </nav>
         {/* ---- Header ---- */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="font-serif text-3xl font-light">{security.ticker}</h1>
               <TierBadge tier={tier} />
             </div>
-            <p className="text-sm" style= color: 'var(--ink-muted)' >{security.name}</p>
-            <p className="text-xs mt-0.5" style= color: 'var(--ink-faint)' >
+            <p className="text-sm" style={{ color: 'var(--ink-muted)' }}>{security.name}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--ink-faint)' }}>
               {[security.theme, security.sector].filter(Boolean).join(' · ')}
             </p>
           </div>
           <div className="text-right">
             <div className="font-mono text-2xl font-medium">
-              {quote ? `$${quote.price.toFixed(2)}` : '—'}
+              {quote ? `$${quote.price.toFixed(2)}` : <span className="skeleton inline-block h-7 w-24 align-middle" />}
             </div>
             {quote && (
-              <div className="font-mono text-sm" style=122>
-                {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
+              <div className="font-mono text-sm" style={{ color: chg >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
+                {chg >= 0 ? '+' : ''}{chg.toFixed(2)}%
               </div>
             )}
-            <div className="text-2xs mt-0.5" style= color: 'var(--ink-faint)' >~15 min delayed</div>
+            <div className="text-2xs mt-0.5" style={{ color: 'var(--ink-faint)' }}>~15 min delayed</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        {/* ---- Key metrics row ---- */}
+        <div className="mb-6">
+          <MetricsRow metrics={metrics} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ---- Left (2/3) ---- */}
-          <div className="col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6">
 
             {/* Price chart */}
-            <div className="p-4" style= border: '0.5px solid var(--border)' >
+            <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
               <PriceChart data={bars} ticker={security.ticker} />
             </div>
 
-            {/* Score bars */}
+            {/* Inline-editable thesis & risks */}
+            <EditableText
+              ticker={security.ticker}
+              label="Thesis"
+              field="thesis_text"
+              initial={thesis?.thesis_text ?? thesis?.why ?? null}
+              placeholder="Why I own (or want to own) this — the core argument."
+            />
+            <EditableText
+              ticker={security.ticker}
+              label="Risks"
+              field="risks"
+              initial={thesis?.risks ?? thesis?.bail ?? null}
+              placeholder="What could break the thesis — the things that would make me sell."
+            />
+
+            {/* Conviction score bars (7-dimension framework) */}
             {score && (
-              <div className="p-4" style= border: '0.5px solid var(--border)' >
+              <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs uppercase tracking-wider" style= color: 'var(--ink-faint)' >Score dimensions</span>
+                  <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Conviction score</span>
                   <span className="font-mono text-lg font-medium">{total}/35</span>
                 </div>
                 <div className="space-y-3">
@@ -94,7 +145,7 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
                     const val = score[key]
                     return (
                       <div key={key} className="flex items-center gap-3">
-                        <span className="font-mono text-xs w-28 shrink-0" style= color: 'var(--ink-muted)' >{label}</span>
+                        <span className="font-mono text-xs w-28 shrink-0" style={{ color: 'var(--ink-muted)' }}>{label}</span>
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map(n => (
                             <div
@@ -103,95 +154,68 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
                               style={{
                                 background: n <= val ? 'var(--accent)' : 'transparent',
                                 border: `0.5px solid ${n <= val ? 'var(--accent)' : 'var(--border)'}`,
-                                color: n <= val ? 'white' : 'var(--ink-faint)',
+                                color: n <= val ? 'var(--on-accent)' : 'var(--ink-faint)',
                               }}
                             >
                               {n}
                             </div>
                           ))}
                         </div>
-                        <span className="text-2xs" style= color: 'var(--ink-faint)' >{desc}</span>
+                        <span className="text-2xs hidden sm:inline" style={{ color: 'var(--ink-faint)' }}>{desc}</span>
                       </div>
                     )
                   })}
                 </div>
-                <div className="mt-4 pt-3" style= borderTop: '0.5px solid var(--border)' >
-                  <Link href={`/stock/${security.ticker}/edit-score`} className="text-xs" style= color: 'var(--accent)' >edit scores →</Link>
+                <div className="mt-4 pt-3" style={{ borderTop: '0.5px solid var(--border)' }}>
+                  <Link href={`/stock/${security.ticker}/edit-score`} className="link text-xs">edit conviction →</Link>
                 </div>
-              </div>
-            )}
-
-            {/* Thesis */}
-            {thesis && (
-              <div className="p-4 space-y-4" style= border: '0.5px solid var(--border)' >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase tracking-wider" style= color: 'var(--ink-faint)' >Thesis</span>
-                  <span className="font-mono text-xs px-1.5 py-0.5 uppercase" style= border: '0.5px solid var(--border)', color: 'var(--ink-muted)' >{thesis.game_type}</span>
-                </div>
-                {[
-                  { label: 'Why', val: thesis.why },
-                  { label: 'Watch for', val: thesis.watch },
-                  { label: 'Bail if', val: thesis.bail },
-                  { label: 'Target / take', val: thesis.take },
-                  { label: 'Falsifiability', val: thesis.falsifiability_note },
-                ].map(({ label, val }) => val && val !== 'to fill in' && (
-                  <div key={label}>
-                    <div className="text-2xs uppercase tracking-wider mb-1" style= color: 'var(--ink-faint)' >{label}</div>
-                    <p className="font-serif text-sm leading-relaxed" style= color: 'var(--ink)' >{val}</p>
-                  </div>
-                ))}
-                <div className="pt-2" style= borderTop: '0.5px solid var(--border)' >
-                  <Link href={`/stock/${security.ticker}/edit-thesis`} className="text-xs" style= color: 'var(--accent)' >edit thesis →</Link>
-                </div>
-              </div>
-            )}
-
-            {!score && (
-              <div className="p-4 text-center" style= border: '0.5px solid var(--border)' >
-                <p className="text-xs mb-2" style= color: 'var(--ink-faint)' >No scores yet</p>
-                <Link href={`/stock/${security.ticker}/edit-score`} className="text-xs" style= color: 'var(--accent)' >+ add scores →</Link>
-              </div>
-            )}
-            {!thesis && (
-              <div className="p-4 text-center" style= border: '0.5px solid var(--border)' >
-                <p className="text-xs mb-2" style= color: 'var(--ink-faint)' >No thesis yet</p>
-                <Link href={`/stock/${security.ticker}/edit-thesis`} className="text-xs" style= color: 'var(--accent)' >+ write thesis →</Link>
               </div>
             )}
           </div>
 
           {/* ---- Right sidebar (1/3) ---- */}
           <div className="space-y-4">
+            {/* Quality breakdown (valuation / growth / moat / momentum) — editable */}
+            <QualityCard ticker={security.ticker} initial={quality} />
+
+            {!score && (
+              <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
+                <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Conviction score</div>
+                <p className="text-xs mb-3" style={{ color: 'var(--ink-muted)' }}>Not scored yet.</p>
+                <Link href={`/stock/${security.ticker}/edit-score`} className="link text-xs">+ score it →</Link>
+              </div>
+            )}
+
             {score && (
-              <div className="p-4" style= border: '0.5px solid var(--border)' >
-                <div className="text-xs uppercase tracking-wider mb-2" style= color: 'var(--ink-faint)' >Radar</div>
+              <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
+                <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Conviction radar</div>
                 <ScoreRadar scores={[{ ticker: security.ticker, score }]} />
               </div>
             )}
 
             {/* Quick actions */}
-            <div className="p-3 space-y-1.5" style= border: '0.5px solid var(--border)' >
-              <div className="text-xs uppercase tracking-wider mb-2" style= color: 'var(--ink-faint)' >Quick actions</div>
-              <Link href={`/portfolio/new?ticker=${security.ticker}`} className="block text-xs py-1" style= color: 'var(--accent)' >+ add to portfolio →</Link>
-              <Link href={`/journal/new?ticker=${security.ticker}`} className="block text-xs py-1" style= color: 'var(--accent)' >+ log a decision →</Link>
-              <Link href={`/stock/${security.ticker}/edit-score`} className="block text-xs py-1" style= color: 'var(--accent)' >+ edit score →</Link>
-              <Link href={`/stock/${security.ticker}/edit-thesis`} className="block text-xs py-1" style= color: 'var(--accent)' >+ edit thesis →</Link>
+            <div className="p-3 space-y-1.5" style={{ border: '0.5px solid var(--border)' }}>
+              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Quick actions</div>
+              <Link href={`/portfolio/new?ticker=${security.ticker}`} className="link block text-xs py-1">+ add to portfolio →</Link>
+              <Link href={`/journal/new?ticker=${security.ticker}`} className="link block text-xs py-1">+ log a decision →</Link>
+              <Link href={`/stock/${security.ticker}/edit-score`} className="link block text-xs py-1">+ edit conviction →</Link>
+              <Link href={`/stock/${security.ticker}/edit-thesis`} className="link block text-xs py-1">+ structured thesis →</Link>
             </div>
 
             {/* Recent journal */}
-            <div className="p-4" style= border: '0.5px solid var(--border)' >
-              <div className="text-xs uppercase tracking-wider mb-3" style= color: 'var(--ink-faint)' >Recent decisions</div>
+            <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
+              <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--ink-faint)' }}>Recent decisions</div>
               {recentJournal.length === 0 ? (
-                <p className="text-xs" style= color: 'var(--ink-faint)' >No entries yet.</p>
+                <p className="text-xs" style={{ color: 'var(--ink-faint)' }}>No entries yet.</p>
               ) : (
                 <div className="space-y-3">
                   {recentJournal.map(e => (
-                    <div key={e.id} className="text-xs pb-2" style= borderBottom: '0.5px solid var(--border)' >
+                    <div key={e.id} className="text-xs pb-2" style={{ borderBottom: '0.5px solid var(--border)' }}>
                       <div className="flex justify-between mb-0.5">
-                        <span className="font-mono uppercase" style= color: 'var(--accent)' >{e.action}</span>
-                        <span style= color: 'var(--ink-faint)' >{e.created_at.split('T')[0]}</span>
+                        <span className="font-mono uppercase" style={{ color: 'var(--accent)' }}>{e.action}</span>
+                        <span style={{ color: 'var(--ink-faint)' }}>{e.created_at.split('T')[0]}</span>
                       </div>
-                      <p className="font-serif" style= color: 'var(--ink-muted)' >
+                      <p className="font-serif" style={{ color: 'var(--ink-muted)' }}>
                         {(e.reasoning ?? '').slice(0, 90)}{(e.reasoning ?? '').length > 90 ? '...' : ''}
                       </p>
                     </div>
@@ -201,22 +225,22 @@ export function StockDetailClient({ security, score, thesis, recentJournal, tota
             </div>
 
             {/* Metadata */}
-            <div className="p-4 space-y-2" style= border: '0.5px solid var(--border)' >
-              <div className="text-xs uppercase tracking-wider mb-2" style= color: 'var(--ink-faint)' >Details</div>
+            <div className="p-4 space-y-2" style={{ border: '0.5px solid var(--border)' }}>
+              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--ink-faint)' }}>Details</div>
               {[
                 { label: 'Source', val: security.source },
                 { label: 'Added', val: security.date_added },
                 { label: 'Sector', val: security.sector },
               ].map(({ label, val }) => val && (
                 <div key={label} className="flex justify-between text-xs">
-                  <span style= color: 'var(--ink-faint)' >{label}</span>
-                  <span className="font-mono" style= color: 'var(--ink-muted)' >{val}</span>
+                  <span style={{ color: 'var(--ink-faint)' }}>{label}</span>
+                  <span className="font-mono" style={{ color: 'var(--ink-muted)' }}>{val}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
       </main>
-    </div>
+    </>
   )
 }

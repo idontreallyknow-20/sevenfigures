@@ -1,18 +1,22 @@
-'use client'
-import { LineChart, Line, ResponsiveContainer } from 'recharts'
-
 interface Props {
   data: { date: string; close: number }[]
   positive?: boolean
 }
 
+// Plain SVG instead of Recharts: the watchlist renders one per row, and this keeps
+// the charting library out of the home page bundle.
 export function Sparkline({ data, positive = true }: Props) {
-  const color = positive ? '#1a5c35' : '#7a1a1a'
+  const w = 80
+  const h = 28
+  const closes = data.map(d => d.close)
+  const min = Math.min(...closes)
+  const range = Math.max(...closes) - min || 1
+  const points = closes
+    .map((c, i) => `${((i / (closes.length - 1)) * w).toFixed(1)},${(h - 2 - ((c - min) / range) * (h - 4)).toFixed(1)}`)
+    .join(' ')
   return (
-    <ResponsiveContainer width="100%" height={40}>
-      <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-        <Line type="monotone" dataKey="close" stroke={color} strokeWidth={1} dot={false} />
-      </LineChart>
-    </ResponsiveContainer>
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true" className="block">
+      <polyline points={points} fill="none" stroke={positive ? 'var(--positive)' : 'var(--negative)'} strokeWidth={1} />
+    </svg>
   )
 }

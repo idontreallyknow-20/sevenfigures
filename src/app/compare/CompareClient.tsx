@@ -1,12 +1,18 @@
 'use client'
 import { useState } from 'react'
-import { ScoreRadar } from '@/components/ScoreRadar'
+import dynamic from 'next/dynamic'
 import type { Security, Score } from '@/lib/types'
 import { computeTotal, computeTier } from '@/lib/types'
 import { TierBadge } from '@/components/TierBadge'
 
 const DIMS = ['moat', 'valuation', 'catalyst', 'falsifiability', 'edge', 'diversification', 'downside'] as const
-const COLORS = ['#1f4a3a', '#2a4a6b', '#b85c00', '#7a1a1a']
+// Mid-tone series colours that read on both the light and dark backgrounds.
+const COLORS = ['#2d8a68', '#4a7fb5', '#c77a1f', '#c0504d']
+
+const ScoreRadar = dynamic(() => import('@/components/ScoreRadar').then(m => m.ScoreRadar), {
+  ssr: false,
+  loading: () => <div className="skeleton h-[260px]" />,
+})
 
 export function CompareClient({ securities, scores }: { securities: Security[]; scores: Score[] }) {
   const [selected, setSelected] = useState<string[]>([])
@@ -21,10 +27,12 @@ export function CompareClient({ securities, scores }: { securities: Security[]; 
     .filter(Boolean) as { ticker: string; score: Score; color: string }[]
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-8">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <div className="mb-6">
-        <h1 className="font-serif text-2xl font-light">Radar comparison</h1>
-        <p className="text-xs mt-1" style={{ color: 'var(--ink-faint)' }}>Select up to 4 names to overlay</p>
+        <h1 className="font-serif text-3xl font-light">Compare stocks</h1>
+        <p className="text-xs mt-1" style={{ color: 'var(--ink-muted)' }}>
+          Pick two to four names to overlay their seven-dimension scores.{selected.length > 0 && ` ${selected.length}/4 selected.`}
+        </p>
       </div>
       <div className="flex flex-wrap gap-2 mb-8">
         {securities.map(sec => {
@@ -34,11 +42,14 @@ export function CompareClient({ securities, scores }: { securities: Security[]; 
             <button
               key={sec.ticker}
               onClick={() => toggle(sec.ticker)}
-              className="px-3 py-1.5 text-xs font-mono transition-colors"
+              aria-pressed={isSelected}
+              disabled={!scoreMap[sec.ticker] || (!isSelected && selected.length >= 4)}
+              title={scoreMap[sec.ticker] ? sec.name : `${sec.name} (not scored yet)`}
+              className="px-3 py-1.5 text-xs font-mono transition-colors disabled:opacity-40"
               style={{
-                border: `0.5px solid ${isSelected ? COLORS[idx % COLORS.length] : 'var(--border)'}`,
-                background: isSelected ? COLORS[idx % COLORS.length] + '20' : 'transparent',
-                color: isSelected ? COLORS[idx % COLORS.length] : 'var(--ink-muted)',
+                border: `${isSelected ? 1.5 : 0.5}px solid ${isSelected ? COLORS[idx % COLORS.length] : 'var(--border)'}`,
+                background: isSelected ? COLORS[idx % COLORS.length] + '22' : 'transparent',
+                color: isSelected ? 'var(--ink)' : 'var(--ink-muted)',
               }}
             >
               {sec.ticker}
@@ -48,13 +59,13 @@ export function CompareClient({ securities, scores }: { securities: Security[]; 
       </div>
 
       {selectedScores.length >= 2 ? (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="p-4" style={{ border: '0.5px solid var(--border)' }}>
             <ScoreRadar scores={selectedScores} />
-            <div className="flex gap-4 mt-2 justify-center">
+            <div className="flex flex-wrap gap-4 mt-2 justify-center">
               {selectedScores.map(s => (
                 <div key={s.ticker} className="flex items-center gap-1.5">
-                  <div className="w-3 h-px" style={{ background: s.color }} />
+                  <div className="w-3 h-0.5" style={{ background: s.color }} />
                   <span className="font-mono text-xs">{s.ticker}</span>
                 </div>
               ))}
@@ -67,7 +78,7 @@ export function CompareClient({ securities, scores }: { securities: Security[]; 
                 <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
                   <th className="text-left py-1 pr-3" style={{ color: 'var(--ink-faint)' }}>Dimension</th>
                   {selectedScores.map(s => (
-                    <th key={s.ticker} className="text-right py-1 px-2" style={{ color: s.color }}>{s.ticker}</th>
+                    <th key={s.ticker} className="text-right py-1 px-2" style={{ borderBottom: `2px solid ${s.color}` }}>{s.ticker}</th>
                   ))}
                 </tr>
               </thead>
@@ -96,7 +107,9 @@ export function CompareClient({ securities, scores }: { securities: Security[]; 
         </div>
       ) : (
         <div className="p-8 text-center" style={{ border: '0.5px solid var(--border)' }}>
-          <p className="font-serif text-base" style={{ color: 'var(--ink-muted)' }}>Select at least 2 names to compare.</p>
+          <p className="font-serif text-base" style={{ color: 'var(--ink-muted)' }}>
+            {selected.length === 1 ? 'Pick one more name to compare.' : 'Pick at least two names to compare.'}
+          </p>
         </div>
       )}
     </main>

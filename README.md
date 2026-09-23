@@ -1,115 +1,45 @@
 # sevenfigures
 
-Personal stock research and portfolio tracker. For your eyes only — no sharing, no logins.
+A stock research and portfolio tracker. Every name on the watchlist gets a score out of 35 across seven dimensions, a written thesis, and entries in a decision journal.
 
----
-
-## What it does
+**Live:** https://myportfolio-pi-sandy-73.vercel.app
 
 | Page | What's there |
 |------|--------------|
-| **Watchlist** (home) | All your stocks with live prices, score, and tier |
-| **Stock detail** | Price chart (1W–ALL), 7-dimension score, investment thesis, quick actions |
-| **Portfolio** | Holdings table with live P&L, total value, allocation by theme |
-| **Journal** | Decision log — every buy, sell, and note with conviction + reasoning |
-| **Compare** | Radar-chart overlay of up to 4 stocks side by side |
+| Watchlist | Every stock with live price, 30-day sparkline, score and tier |
+| Stock page | Price chart (1M to 5Y), key metrics, conviction score, quality radar, thesis and risks |
+| Portfolio | Open positions with P&L, weights and allocation |
+| Journal | Every buy, sell and hold, with conviction and reasoning |
+| Compare | Up to four stocks on one radar chart |
 
-**Data**: Alpaca Market Data API — ~15 minute delayed quotes on the free tier, refreshing every 60 seconds. Works without Alpaca keys (shows demo prices with a banner).
-
----
-
-## Local setup (5 minutes)
-
-### 1. Clone & install
+## Run it
 
 ```bash
-git clone https://github.com/idontreallyknow-20/sevenfigures.git
-cd sevenfigures
 npm install
+cp .env.example .env.local   # optional, see below
+npm run dev                  # http://localhost:3000
 ```
 
-### 2. Set up Supabase
+With no env vars it runs in demo mode: a seed watchlist, simulated prices, and saving turned off.
 
-1. Go to [supabase.com](https://supabase.com) → New project
-2. Open the **SQL Editor** and paste + run each file:
-   - `supabase/migrations/001_schema.sql` — creates all tables
-   - `supabase/migrations/002_seed.sql` — optional example data
-3. In **Settings → API**, copy:
-   - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
-   - `anon` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY`
+To make it real:
 
-### 3. Set up Alpaca (for real prices)
+1. **Supabase:** create a project, run the files in `supabase/migrations/` in the SQL editor (in order), then copy the URL, anon key and service role key into `.env.local`.
+2. **Market data:** add a free `FINNHUB_KEY` (quotes, profiles, metrics) and/or Alpaca keys (price history).
+3. **Daily snapshots:** set `CRON_SECRET`. `vercel.json` calls `/api/cron` every weekday at 22:00 UTC.
 
-1. Sign up at [alpaca.markets](https://alpaca.markets) — free tier is fine
-2. Go to **Paper Trading → API Keys** and create a key
-3. Copy key ID → `ALPACA_API_KEY` and secret → `ALPACA_API_SECRET`
+On Vercel, add the same variables under Project Settings, then redeploy.
 
-> **Without Alpaca**: the app runs in demo mode with random mock prices. All other features work normally.
+> The app has no login. Anyone with the URL can see and edit what's in the database, so keep the URL private or add auth and row-level security before storing anything sensitive.
 
-### 4. Create your env file
+## Stack
 
-```bash
-cp .env.example .env.local
-# fill in the values from steps 2 & 3
-```
+Next.js 14 (App Router), TypeScript, Tailwind, Supabase, Recharts, Finnhub and Alpaca.
 
-### 5. Run it
+## Scoring
 
-```bash
-npm run dev
-# open http://localhost:3000
-```
+Seven dimensions scored 1 to 5 (5 is always favourable): moat, valuation, catalyst, falsifiability, edge, diversification, downside. Core is 26+, Buyable 21 to 25, Watch 17 to 20, Pass 16 or less.
 
 ---
 
-## Adding your portfolio
-
-You can enter everything through the UI — no code needed:
-
-| What | Where |
-|------|-------|
-| Add a stock to your watchlist | **Watchlist → + add security** |
-| Score a stock (1–5 on 7 dimensions) | **Stock detail → + add scores** |
-| Write an investment thesis | **Stock detail → + write thesis** |
-| Add a holding to your portfolio | **Portfolio → + add holding** or **Stock detail → + add to portfolio** |
-| Log a buy/sell/note | **Journal → + new entry** or **Stock detail → + log a decision** |
-| Close a position | **Portfolio → close** (next to any holding) |
-
----
-
-## Deploy to Vercel (free)
-
-1. Push to GitHub (already done)
-2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import `sevenfigures`
-3. Add **all env variables** from `.env.example` in the Vercel project settings
-4. Hit **Deploy** — zero config needed
-
-**Daily price snapshots**: `vercel.json` includes a cron job that runs every weekday at 10 PM UTC to save closing prices. Set `CRON_SECRET` to a random string in both your `.env.local` and Vercel env vars.
-
----
-
-## Scoring framework
-
-7 dimensions, each scored 1–5 (5 = favorable). Total out of 35.
-
-| Tier | Score | Meaning |
-|------|-------|---------|
-| Core | 26+ | High conviction — size up |
-| Buyable | 21–25 | Good risk/reward |
-| Watch | 17–20 | Interesting but not ready |
-| Pass | ≤16 | Not there yet |
-
----
-
-## Architecture
-
-- **Next.js 14** (App Router) — TypeScript
-- **Supabase** (Postgres) — all data lives here
-- **Alpaca Market Data** — server-side only, never exposes keys to browser
-- **Recharts** — price chart + radar
-- **Tailwind CSS** — utility classes + CSS variables for dark/light mode
-
----
-
-*This is a personal tool. No auth, no sharing — just a clean place to track your thinking.*
+Built by [Joseph Leung](https://josephleung-site.vercel.app).
