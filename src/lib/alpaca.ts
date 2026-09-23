@@ -60,5 +60,3 @@ export async function getBars(ticker: string, days: number): Promise<{ date: str
     return getMockBars(ticker, days)
   }
 }
-
-export { hasAlpaca }

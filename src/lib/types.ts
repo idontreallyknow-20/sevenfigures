@@ -65,20 +65,6 @@ export interface JournalEntry {
   created_at: string
 }
 
-export interface PriceSnapshot {
-  id: string
-  ticker: string
-  price: number
-  captured_at: string
-}
-
-export interface Benchmark {
-  id: string
-  symbol: string
-  close: number
-  date: string
-}
-
 export type Tier = 'Core' | 'Buyable' | 'Watch' | 'Pass'
 
 export function computeTotal(score: Omit<Score, 'ticker' | 'updated_at'>): number {

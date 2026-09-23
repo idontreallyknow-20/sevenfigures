@@ -29,7 +29,6 @@ export const SEED_QUALITY: Record<string, QualityScore> = {
   ASML: { ticker: 'ASML', valuation: 3, growth: 4, moat: 5, momentum: 3, updated_at: ts },
 }
 
-export const SEED_TICKERS = SEED_SECURITIES.map(s => s.ticker)
 
 export function defaultQuality(ticker: string): QualityScore {
   return SEED_QUALITY[ticker] ?? { ticker, valuation: 3, growth: 3, moat: 3, momentum: 3, updated_at: ts }

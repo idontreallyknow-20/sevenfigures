@@ -1,4 +1,5 @@
 import { getQuote as getAlpacaQuote } from './alpaca'
+import { getMockBars } from './mock-data'
 import type { QuoteData } from './types'
 
 // Finnhub proxy helpers. The API key is read server-side only (process.env.FINNHUB_KEY)
@@ -55,7 +56,8 @@ function mockProfile(ticker: string): Profile {
 
 function mockMetrics(ticker: string): Metrics {
   const h = hash(ticker)
-  const high = 100 + (h % 800)
+  // Keep the 52-week range consistent with the simulated price history.
+  const closes = getMockBars(ticker, 365).map(b => b.close)
   return {
     ticker,
     peTTM: 15 + (h % 45),
@@ -63,8 +65,8 @@ function mockMetrics(ticker: string): Metrics {
     revenueGrowth: ((h % 60) - 10),
     grossMargin: 30 + (h % 50),
     marketCap: (50 + (h % 2000)) * 1e9,
-    week52High: high,
-    week52Low: Math.round(high * 0.6 * 100) / 100,
+    week52High: Math.max(...closes),
+    week52Low: Math.min(...closes),
     isDemo: true,
   }
 }
@@ -135,5 +137,3 @@ export async function getMetrics(ticker: string): Promise<Metrics> {
     return mockMetrics(ticker)
   }
 }
-
-export { hasFinnhub }
