@@ -14,6 +14,7 @@ const mockPrices: Record<string, number> = {
   ANET: 328.50,
   SOXX: 222.80,
   QQQ: 480.10,
+  SPY: 588.40,
 }
 
 export function getMockQuote(ticker: string): QuoteData {

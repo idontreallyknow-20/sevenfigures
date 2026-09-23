@@ -20,7 +20,7 @@ interface Row {
   tier: Tier
 }
 
-type SortKey = 'total' | 'valuation' | 'tier' | 'ticker'
+type SortKey = 'total' | 'valuation' | 'tier' | 'ticker' | 'date_added'
 
 function tierOrder(t: Tier) {
   return { Core: 0, Buyable: 1, Watch: 2, Pass: 3 }[t]
@@ -77,6 +77,7 @@ export function WatchlistClient({ rows: initialRows }: { rows: Row[] }) {
     else if (sortKey === 'valuation') diff = (a.score?.valuation ?? 0) - (b.score?.valuation ?? 0)
     else if (sortKey === 'tier') diff = tierOrder(a.tier) - tierOrder(b.tier)
     else if (sortKey === 'ticker') diff = a.ticker.localeCompare(b.ticker)
+    else if (sortKey === 'date_added') diff = a.date_added.localeCompare(b.date_added)
     return sortDir === 'asc' ? diff : -diff
   })
 
@@ -118,7 +119,7 @@ export function WatchlistClient({ rows: initialRows }: { rows: Row[] }) {
                 <SortHead k="total" label="Score" />
                 <SortHead k="valuation" label="Val" />
                 <th className="text-center py-2 px-3 font-mono text-2xs uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>Tier</th>
-                <SortHead k="ticker" label="Added" />
+                <SortHead k="date_added" label="Added" />
               </tr>
             </thead>
             <tbody>
